@@ -21,6 +21,7 @@ Imports System.IO
 Imports System.Net
 Imports System.Net.Http
 Imports System.Text.Json
+Imports System.Linq
 Imports ViVeTool_GUI.Wpf.Models
 
 Namespace Services
@@ -48,6 +49,7 @@ Namespace Services
         Private Const ETagCacheFile As String = "etags.json"
 
         Private _feedBaseUrl As String
+        Private ReadOnly _latestJsonPath As String
 
         ''' <summary>
         ''' ETag cache for conditional requests.
@@ -58,7 +60,7 @@ Namespace Services
         ''' Creates a new instance of GitHubService with default settings.
         ''' </summary>
         Public Sub New()
-            Me.New(Nothing, Nothing)
+            Me.New(Nothing, Nothing, Nothing)
         End Sub
 
         ''' <summary>
@@ -66,15 +68,17 @@ Namespace Services
         ''' </summary>
         ''' <param name="httpClient">The HttpClient to use for requests.</param>
         Public Sub New(httpClient As HttpClient)
-            Me.New(httpClient, Nothing)
+            Me.New(httpClient, Nothing, Nothing)
         End Sub
 
         ''' <summary>
-        ''' Creates a new instance of GitHubService with custom HttpClient and feed base URL.
+        ''' Creates a new instance of GitHubService with custom HttpClient, feed base URL, and optional latest file name.
+        ''' If latestJsonPath is provided you can point to a plain text file (e.g. "builds.txt") or another JSON filename.
         ''' </summary>
         ''' <param name="httpClient">The HttpClient to use for requests (or Nothing for default).</param>
         ''' <param name="feedBaseUrl">The base URL for the feed (or Nothing for default).</param>
-        Public Sub New(httpClient As HttpClient, feedBaseUrl As String)
+        ''' <param name="latestJsonPath">Optional file name for the 'latest' feed (defaults to latest.json).</param>
+        Public Sub New(httpClient As HttpClient, feedBaseUrl As String, Optional latestJsonPath As String = Nothing)
             If httpClient Is Nothing Then
                 _httpClient = New HttpClient()
                 _httpClient.DefaultRequestHeaders.Add("User-Agent", "ViVeTool-GUI-WPF")
@@ -83,6 +87,7 @@ Namespace Services
             End If
 
             _feedBaseUrl = If(String.IsNullOrWhiteSpace(feedBaseUrl), DefaultFeedBaseUrl, feedBaseUrl)
+            _latestJsonPath = If(String.IsNullOrWhiteSpace(latestJsonPath), latestJsonPath, latestJsonPath)
             _cacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ViVeTool-GUI", "Cache")
             _etagCache = New Dictionary(Of String, String)()
 
@@ -111,28 +116,51 @@ Namespace Services
         End Function
 
         ''' <summary>
-        ''' Gets the latest feed info from latest.json with ETag caching and offline fallback.
+        ''' Gets the latest feed info from latest.json (or alternate file) with ETag caching and offline fallback.
+        ''' Supports plain text lists (newline or comma separated) as a fallback to JSON.
         ''' </summary>
         ''' <returns>The LatestFeedInfo or Nothing if unavailable.</returns>
         Public Async Function GetLatestFeedInfoAsync() As Task(Of LatestFeedInfo)
-            Dim url = _feedBaseUrl & LatestJsonPath
+            Dim base = _feedBaseUrl
+            Dim url As String
+            If base.EndsWith("/") Then
+                url = base & _latestJsonPath
+            Else
+                url = base & "/" & _latestJsonPath
+            End If
+
             Dim cacheFile = Path.Combine(_cacheDirectory, LatestCacheFile)
 
             Try
                 ' Try to fetch with ETag conditional request
                 Dim content = Await FetchWithETagAsync(url, cacheFile)
                 If Not String.IsNullOrWhiteSpace(content) Then
-                    Dim feedInfo = JsonSerializer.Deserialize(Of LatestFeedInfo)(content)
-                    Return feedInfo
+                    ' Try JSON first
+                    Try
+                        Dim feedInfo = JsonSerializer.Deserialize(Of LatestFeedInfo)(content)
+                        If feedInfo IsNot Nothing Then
+                            Return feedInfo
+                        End If
+                    Catch ex As JsonException
+                        ' If JSON parse fails, attempt to parse plain text (newline or comma separated)
+                        Try
+                            Dim builds = content.Split({vbCrLf, vbLf, vbCr, ","c}, StringSplitOptions.RemoveEmptyEntries).
+                                              Select(Function(s) s.Trim()).
+                                              Where(Function(s) Not String.IsNullOrWhiteSpace(s)).
+                                              ToList()
+                            If builds.Count > 0 Then
+                                Return New LatestFeedInfo With {.Builds = builds}
+                            End If
+                        Catch innerEx As Exception
+                            System.Diagnostics.Debug.WriteLine($"Failed to parse alternate latest feed format: {innerEx.Message}")
+                        End Try
+                    End Try
                 End If
             Catch ex As HttpRequestException
                 ' Network error - try offline fallback
-                System.Diagnostics.Debug.WriteLine($"Network error fetching latest.json: {ex.Message}")
-            Catch ex As JsonException
-                ' JSON parsing error
-                System.Diagnostics.Debug.WriteLine($"JSON parsing error for latest.json: {ex.Message}")
+                System.Diagnostics.Debug.WriteLine($"Network error fetching latest feed: {ex.Message}")
             Catch ex As Exception
-                System.Diagnostics.Debug.WriteLine($"Error fetching latest.json: {ex.Message}")
+                System.Diagnostics.Debug.WriteLine($"Error fetching latest feed: {ex.Message}")
             End Try
 
             ' Offline fallback: try to load from cache
@@ -191,7 +219,7 @@ Namespace Services
         ''' Gets feature data for a specific Windows build.
         ''' </summary>
         ''' <param name="buildNumber">The Windows build number.</param>
-        ''' <returns>A dictionary of feature IDs to feature names.</returns>
+        ''' <returns>A dictionary of feature ID to feature name mappings.</returns>
         Public Async Function GetFeaturesForBuildAsync(buildNumber As String) As Task(Of Dictionary(Of Integer, String))
             Dim entries = Await GetFeatureEntriesForBuildAsync(buildNumber)
             Dim result = New Dictionary(Of Integer, String)()
@@ -276,6 +304,13 @@ Namespace Services
                     If File.Exists(cacheFile) Then
                         Return File.ReadAllText(cacheFile)
                     End If
+                ElseIf Not response.IsSuccessStatusCode Then
+                    ' Handle error responses (404, 403, etc.) - try cached content
+                    If File.Exists(cacheFile) Then
+                        System.Diagnostics.Debug.WriteLine($"Using cached content for {url} due to {response.StatusCode}")
+                        Return File.ReadAllText(cacheFile)
+                    End If
+                    Throw New HttpRequestException($"Response status code does not indicate success: {CInt(response.StatusCode)} ({response.ReasonPhrase}).")
                 End If
 
                 response.EnsureSuccessStatusCode()
