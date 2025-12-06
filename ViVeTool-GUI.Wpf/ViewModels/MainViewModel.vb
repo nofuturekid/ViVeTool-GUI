@@ -32,6 +32,9 @@ Namespace ViewModels
     Partial Public Class MainViewModel
         Inherits ObservableObject
 
+        ' Constants
+        Private Const FeatureScannerExecutable As String = "ViVeTool_GUI.FeatureScanner.exe"
+
         Private ReadOnly _featureService As FeatureService
         Private ReadOnly _gitHubService As GitHubService
         Private ReadOnly _themeService As ThemeService
@@ -561,13 +564,13 @@ Namespace ViewModels
             Try
                 ' Try to find the Feature Scanner executable in the application directory
                 Dim appDirectory = AppDomain.CurrentDomain.BaseDirectory
-                Dim scannerPath = System.IO.Path.Combine(appDirectory, "ViVeTool_GUI.FeatureScanner.exe")
+                Dim scannerPath = System.IO.Path.Combine(appDirectory, FeatureScannerExecutable)
 
                 If Not System.IO.File.Exists(scannerPath) Then
                     ' Try alternative path (development scenario)
                     Dim parentDir = System.IO.Directory.GetParent(appDirectory)?.FullName
                     If parentDir IsNot Nothing Then
-                        scannerPath = System.IO.Path.Combine(parentDir, "ViVeTool-GUI.FeatureScanner", "bin", "Debug", "ViVeTool_GUI.FeatureScanner.exe")
+                        scannerPath = System.IO.Path.Combine(parentDir, "ViVeTool-GUI.FeatureScanner", "bin", "Debug", FeatureScannerExecutable)
                     End If
                 End If
 
@@ -581,7 +584,7 @@ Namespace ViewModels
                     ' Show the publish panel after launching the scanner
                     CanShowPublishPanel = True
                 Else
-                    StatusMessage = "Feature Scanner not found. Please ensure ViVeTool_GUI.FeatureScanner.exe is available."
+                    StatusMessage = $"Feature Scanner not found. Please ensure {FeatureScannerExecutable} is available."
                 End If
             Catch ex As Exception
                 StatusMessage = $"Error launching Feature Scanner: {ex.Message}"

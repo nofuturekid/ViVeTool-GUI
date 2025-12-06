@@ -175,10 +175,12 @@ Namespace Services
                     Dim doc = JsonDocument.Parse(content)
 
                     ' Check if permissions object exists and has push or admin access
-                    If doc.RootElement.TryGetProperty("permissions", Nothing) Then
-                        Dim permissions = doc.RootElement.GetProperty("permissions")
-                        Dim hasPush = permissions.TryGetProperty("push", Nothing) AndAlso permissions.GetProperty("push").GetBoolean()
-                        Dim hasAdmin = permissions.TryGetProperty("admin", Nothing) AndAlso permissions.GetProperty("admin").GetBoolean()
+                    Dim permissionsElement As JsonElement = Nothing
+                    If doc.RootElement.TryGetProperty("permissions", permissionsElement) Then
+                        Dim pushElement As JsonElement = Nothing
+                        Dim adminElement As JsonElement = Nothing
+                        Dim hasPush = permissionsElement.TryGetProperty("push", pushElement) AndAlso pushElement.GetBoolean()
+                        Dim hasAdmin = permissionsElement.TryGetProperty("admin", adminElement) AndAlso adminElement.GetBoolean()
                         Return hasPush OrElse hasAdmin
                     End If
                 End If
