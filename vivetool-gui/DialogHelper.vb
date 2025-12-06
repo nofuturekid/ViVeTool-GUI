@@ -13,7 +13,6 @@
 '
 'You should have received a copy of the GNU General Public License
 'along with this program.  If not, see <https://www.gnu.org/licenses/>.
-Imports Telerik.WinControls.UI
 
 ''' <summary>
 ''' Helper class for common dialog operations
@@ -27,42 +26,20 @@ Public NotInheritable Class DialogHelper
     ''' <param name="exceptionText">Exception text to display in expander</param>
     ''' <param name="additionalText">Optional additional text to display</param>
     Public Shared Sub ShowExceptionDialog(caption As String, heading As String, exceptionText As String, Optional additionalText As String = Nothing)
-        'Create a Button that on Click, copies the Exception Text
-        Dim CopyExAndClose As New RadTaskDialogButton With {
-            .Text = "Copy Exception and Close"
-        }
-        AddHandler CopyExAndClose.Click, New EventHandler(Sub()
-                                                              Try
-                                                                  My.Computer.Clipboard.SetText(exceptionText)
-                                                              Catch clipex As Exception
-                                                                  'Do nothing
-                                                              End Try
-                                                          End Sub)
-
-        'Fancy Message Box
-        Dim RTD As New RadTaskDialogPage With {
-                .Caption = caption,
-                .Heading = heading,
-                .Icon = RadTaskDialogIcon.ShieldErrorRedBar
-            }
-
-        'Add additional text if provided
+        Dim message As String = heading
         If additionalText IsNot Nothing Then
-            RTD.Text = additionalText
+            message &= vbNewLine & vbNewLine & additionalText
         End If
+        message &= vbNewLine & vbNewLine & "Exception Details:" & vbNewLine & exceptionText
 
-        'Add the Exception Text to the Expander
-        RTD.Expander.Text = exceptionText
-
-        'Set the Text for the "Collapse Info" and "More Info" Buttons
-        RTD.Expander.ExpandedButtonText = "Collapse Exception"
-        RTD.Expander.CollapsedButtonText = "Show Exception"
-
-        'Add the Button to the Message Box
-        RTD.CommandAreaButtons.Add(CopyExAndClose)
-
-        'Show the Message Box
-        RadTaskDialog.ShowDialog(RTD)
+        Dim result = MessageBox.Show(message & vbNewLine & vbNewLine & "Click Yes to copy exception to clipboard.", caption, MessageBoxButtons.YesNo, MessageBoxIcon.Error)
+        If result = DialogResult.Yes Then
+            Try
+                My.Computer.Clipboard.SetText(exceptionText)
+            Catch clipex As Exception
+                'Do nothing
+            End Try
+        End If
     End Sub
 
     ''' <summary>
@@ -85,34 +62,23 @@ Public NotInheritable Class DialogHelper
             exceptionText = webex.ToString
         End Try
 
-        'Create a Button that on Click, copies the Exception Text
-        Dim CopyExAndClose As New RadTaskDialogButton With {
-            .Text = "Copy Exception and Close"
-        }
-        AddHandler CopyExAndClose.Click, New EventHandler(Sub()
-                                                              Try
-                                                                  Dim statusDesc As String
-                                                                  Try
-                                                                      statusDesc = DirectCast(webex.Response, HttpWebResponse).StatusDescription
-                                                                  Catch
-                                                                      statusDesc = webex.ToString
-                                                                  End Try
-                                                                  My.Computer.Clipboard.SetText(statusDesc)
-                                                              Catch clipex As Exception
-                                                                  'Do nothing
-                                                              End Try
-                                                          End Sub)
+        Dim message As String = "A Network Exception occurred. Your IP may have been temporarily rate limited by the GitHub API for an hour."
+        message &= vbNewLine & vbNewLine & "Exception Details:" & vbNewLine & exceptionText
 
-        Dim RTD As New RadTaskDialogPage With {
-                .Caption = " A Network Exception occurred",
-                .Heading = "A Network Exception occurred. Your IP may have been temporarily rate limited by the GitHub API for an hour.",
-                .Icon = RadTaskDialogIcon.ShieldErrorRedBar
-            }
-        RTD.Expander.Text = exceptionText
-        RTD.Expander.ExpandedButtonText = "Collapse Exception"
-        RTD.Expander.CollapsedButtonText = "Show Exception"
-        RTD.CommandAreaButtons.Add(CopyExAndClose)
-        RadTaskDialog.ShowDialog(RTD)
+        Dim result = MessageBox.Show(message & vbNewLine & vbNewLine & "Click Yes to copy exception to clipboard.", " A Network Exception occurred", MessageBoxButtons.YesNo, MessageBoxIcon.Error)
+        If result = DialogResult.Yes Then
+            Try
+                Dim statusDesc As String
+                Try
+                    statusDesc = DirectCast(webex.Response, HttpWebResponse).StatusDescription
+                Catch
+                    statusDesc = webex.ToString
+                End Try
+                My.Computer.Clipboard.SetText(statusDesc)
+            Catch clipex As Exception
+                'Do nothing
+            End Try
+        End If
     End Sub
 
     ''' <summary>
@@ -122,17 +88,26 @@ Public NotInheritable Class DialogHelper
     ''' <param name="heading">Dialog heading</param>
     ''' <param name="text">Optional additional text</param>
     ''' <param name="icon">Optional icon (defaults to Error)</param>
-    Public Shared Sub ShowErrorDialog(caption As String, heading As String, Optional text As String = Nothing, Optional icon As RadTaskDialogIcon = Nothing)
-        Dim RTD As New RadTaskDialogPage With {
-                .Caption = caption,
-                .Heading = heading,
-                .Icon = If(icon Is Nothing, RadTaskDialogIcon.Error, icon)
-            }
+    Public Shared Sub ShowErrorDialog(caption As String, heading As String, Optional text As String = Nothing, Optional icon As MessageBoxIcon = MessageBoxIcon.Error)
+        Dim message As String = heading
         If text IsNot Nothing Then
-            RTD.Text = text
+            message &= vbNewLine & vbNewLine & text
         End If
-        RTD.CommandAreaButtons.Add(RadTaskDialogButton.Close)
-        RadTaskDialog.ShowDialog(RTD)
+        MessageBox.Show(message, caption, MessageBoxButtons.OK, icon)
+    End Sub
+
+    ''' <summary>
+    ''' Shows a warning dialog
+    ''' </summary>
+    ''' <param name="caption">Dialog caption</param>
+    ''' <param name="heading">Dialog heading</param>
+    ''' <param name="text">Optional additional text</param>
+    Public Shared Sub ShowWarningDialog(caption As String, heading As String, Optional text As String = Nothing)
+        Dim message As String = heading
+        If text IsNot Nothing Then
+            message &= vbNewLine & vbNewLine & text
+        End If
+        MessageBox.Show(message, caption, MessageBoxButtons.OK, MessageBoxIcon.Warning)
     End Sub
 
     ''' <summary>
@@ -141,12 +116,6 @@ Public NotInheritable Class DialogHelper
     ''' <param name="caption">Dialog caption</param>
     ''' <param name="heading">Dialog heading</param>
     Public Shared Sub ShowSuccessDialog(caption As String, heading As String)
-        Dim RTD As New RadTaskDialogPage With {
-                .Caption = caption,
-                .Heading = heading,
-                .Icon = RadTaskDialogIcon.ShieldSuccessGreenBar
-            }
-        RTD.CommandAreaButtons.Add(RadTaskDialogButton.Close)
-        RadTaskDialog.ShowDialog(RTD)
+        MessageBox.Show(heading, caption, MessageBoxButtons.OK, MessageBoxIcon.Information)
     End Sub
 End Class

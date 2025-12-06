@@ -14,7 +14,7 @@
 'You should have received a copy of the GNU General Public License
 'along with this program.  If not, see <https://www.gnu.org/licenses/>.
 Option Strict On
-Imports AutoUpdaterDotNET, Newtonsoft.Json.Linq, Albacore.ViVe, System.Runtime.InteropServices, Telerik.WinControls.UI
+Imports AutoUpdaterDotNET, Newtonsoft.Json.Linq, Albacore.ViVe, System.Runtime.InteropServices
 
 ''' <summary>
 ''' ViVeTool GUI
@@ -113,8 +113,11 @@ Public Class GUI
         BackgroundThread.SetApartmentState(Threading.ApartmentState.STA)
         BackgroundThread.Start()
 
-        'Disable the close button in the search row
-        RGV_MainGridView.MasterView.TableSearchRow.ShowCloseButton = False
+        'Setup search functionality
+        AddHandler TB_Search.TextChanged, AddressOf TB_Search_TextChanged
+
+        'Setup dropdown button to show context menu
+        AddHandler RDDB_PerformAction.Click, AddressOf RDDB_PerformAction_Click
     End Sub
 
     ''' <summary>
@@ -151,14 +154,9 @@ Public Class GUI
                        RLE_StatusLabel.Text = "Network Functions disabled. Press F12 to manually change a Feature."
 
                        'Third, Show an error message
-                       Dim RTD As New RadTaskDialogPage With {
-                            .Caption = " A Network Exception occurred",
-                            .Heading = "A Network Exception occurred",
-                            .Text = "ViVeTool-GUI is unable to populate the Build Combo Box, if the Device isn't connected to the Internet, or if the GitHub API is unreachable." & vbNewLine & vbNewLine & "You are still able to manually change a Feature ID by pressing F12, and able to load a local Feature List.",
-                            .Icon = RadTaskDialogIcon.ShieldWarningYellowBar
-                        }
-                       RTD.CommandAreaButtons.Add(RadTaskDialogButton.Close)
-                       RadTaskDialog.ShowDialog(RTD)
+                       DialogHelper.ShowWarningDialog(" A Network Exception occurred",
+                           "A Network Exception occurred",
+                           "ViVeTool-GUI is unable to populate the Build Combo Box, if the Device isn't connected to the Internet, or if the GitHub API is unreachable." & vbNewLine & vbNewLine & "You are still able to manually change a Feature ID by pressing F12, and able to load a local Feature List.")
                    End Sub)
         End If
     End Sub
@@ -239,13 +237,12 @@ Public Class GUI
 
             Invoke(Sub()
                        'Add the Items of tempList to the Combo Box
-                       RDDL_Build.Items.AddRange(tempList)
+                       For Each item In tempList
+                           RDDL_Build.Items.Add(item)
+                       Next
 
-                       'Deselect any Item
+                       'Deselect any Item - with SelectedIndex = -1, the ComboBox shows empty
                        RDDL_Build.SelectedIndex = -1
-
-                       'Set default Text
-                       RDDL_Build.Text = "Select Build..."
 
                        'Add the Handler
                        AddHandler RDDL_Build.SelectedIndexChanged, AddressOf PopulateDataGridView
@@ -321,28 +318,26 @@ Public Class GUI
     ''' <param name="sender">Default sender Object</param>
     ''' <param name="e">Default EventArgs</param>
     Private Sub PopulateDataGridView(sender As Object, e As EventArgs) 'Handles RDDL_Build.SelectedIndexChanged
-        'Disable Animations and selection. Helps with flickering
-        Telerik.WinControls.AnimatedPropertySetting.AnimationsEnabled = False
-        RGV_MainGridView.SelectionMode = GridViewSelectionMode.None
-
-        'Close Combo Box. This needs to be done, because in some cases the Combo Box is half closed and half opened, allowing the user to change it, while the Background Worker is running, which will result in an exception.
-        RDDL_Build.CloseDropDown()
+        'Disable selection temporarily
+        RGV_MainGridView.ClearSelection()
 
         'Disable Combo Box
         RDDL_Build.Enabled = False
 
-        'Remove the Search Row temporarily
-        RGV_MainGridView.MasterView.TableSearchRow.Search("")
-        RGV_MainGridView.MasterView.TableSearchRow.IsVisible = False
+        'Clear the search box
+        TB_Search.Text = String.Empty
+
+        'Get the selected text
+        Dim selectedText As String = If(RDDL_Build.SelectedItem IsNot Nothing, RDDL_Build.SelectedItem.ToString(), String.Empty)
 
         'If "Load manually..." is selected, then load from a TXT File, else load normally
-        If RDDL_Build.Text = "Load manually..." Then
+        If selectedText = "Load manually..." Then
             Dim TXTThread As New Threading.Thread(AddressOf LoadFromManualTXT) With {
                 .IsBackground = True
             }
             TXTThread.SetApartmentState(Threading.ApartmentState.STA)
             TXTThread.Start()
-        ElseIf RDDL_Build.Text = Nothing Then
+        ElseIf String.IsNullOrEmpty(selectedText) Then
             'Do Nothing
         Else
             'Run Background Worker
@@ -362,9 +357,6 @@ Public Class GUI
             }
 
         If OFD.ShowDialog() = DialogResult.OK AndAlso IO.File.Exists(OFD.FileName) Then
-            'Remove all Group Descriptors
-            Invoke(Sub() RGV_MainGridView.GroupDescriptors.Clear())
-
             'Set Status Label
             Invoke(Sub() RLE_StatusLabel.Text = "Populating the Data Grid View... This can take a while.")
             'Clear Data Grid View
@@ -408,24 +400,18 @@ Public Class GUI
 
                 'Add all rows to the grid in a single batch on the UI thread
                 Invoke(Sub()
-                           RGV_MainGridView.BeginUpdate()
                            For Each row As Object() In rowData
                                RGV_MainGridView.Rows.Add(row)
                            Next
-                           RGV_MainGridView.EndUpdate()
                        End Sub)
 
                 'Move to the first row, remove the selection and change the Status Label to Done.
                 Invoke(Sub()
-                           RGV_MainGridView.CurrentRow = RGV_MainGridView.Rows.Item(0)
-                           RGV_MainGridView.CurrentRow = Nothing
+                           If RGV_MainGridView.Rows.Count > 0 Then
+                               RGV_MainGridView.ClearSelection()
+                           End If
                            RLE_StatusLabel.Text = "Done."
                        End Sub)
-
-                'Enable Grouping
-                Dim LineGroup As New Telerik.WinControls.Data.GroupDescriptor()
-                LineGroup.GroupNames.Add("FeatureInfo", ComponentModel.ListSortDirection.Ascending)
-                Invoke(Sub() RGV_MainGridView.GroupDescriptors.Add(LineGroup))
             Catch ex As Exception
                 Invoke(Sub()
                            'Catch Any Exception that may occur
@@ -434,9 +420,6 @@ Public Class GUI
                            'Clear the selection
                            RDDL_Build.SelectedIndex = -1
                            RDDL_Build.Enabled = True
-
-                           'Make the Search Row Visible
-                           RGV_MainGridView.MasterView.TableSearchRow.IsVisible = True
                        End Sub)
             End Try
         Else
@@ -444,12 +427,6 @@ Public Class GUI
             Invoke(Sub()
                        RDDL_Build.SelectedIndex = -1
                        RDDL_Build.Enabled = True
-                   End Sub)
-
-            'Resume searching
-            Invoke(Sub()
-                       'Make the Search Row Visible
-                       RGV_MainGridView.MasterView.TableSearchRow.IsVisible = True
                    End Sub)
         End If
     End Sub
@@ -466,11 +443,12 @@ Public Class GUI
     ''' <param name="e">Default EventArgs</param>
     Private Sub BGW_PopulateGridView_DoWork(sender As Object, e As System.ComponentModel.DoWorkEventArgs) Handles BGW_PopulateGridView.DoWork
         If Not BGW_PopulateGridView.CancellationPending Then
-            'Debug
-            Diagnostics.Debug.WriteLine("Loading Build " & RDDL_Build.Text)
+            'Get the selected build text
+            Dim selectedBuild As String = String.Empty
+            Invoke(Sub() selectedBuild = If(RDDL_Build.SelectedItem IsNot Nothing, RDDL_Build.SelectedItem.ToString(), String.Empty))
 
-            'Remove all Group Descriptors
-            Invoke(Sub() RGV_MainGridView.GroupDescriptors.Clear())
+            'Debug
+            Diagnostics.Debug.WriteLine("Loading Build " & selectedBuild)
 
             'Set Status Label
             Invoke(Sub() RLE_StatusLabel.Text = "Populating the Data Grid View... This can take a while.")
@@ -480,15 +458,15 @@ Public Class GUI
             Try
                 Invoke(Sub() RGV_MainGridView.Rows.Clear())
             Catch ex As Exception
-                Diagnostics.Debug.WriteLine("Exception while clearing row. Build: " & RDDL_Build.Text & ". " & ex.Message)
+                Diagnostics.Debug.WriteLine("Exception while clearing row. Build: " & selectedBuild & ". " & ex.Message)
             End Try
 
             'Prepare Web Client and download Build TXT
             Dim WebClient As New WebClient With {
                     .Encoding = System.Text.Encoding.UTF8
                 }
-            Dim path As String = IO.Path.GetTempPath & RDDL_Build.Text & ".txt"
-            WebClient.DownloadFile("https://raw.githubusercontent.com/riverar/mach2/master/features/" & RDDL_Build.Text & ".txt", path)
+            Dim path As String = IO.Path.GetTempPath & selectedBuild & ".txt"
+            WebClient.DownloadFile("https://raw.githubusercontent.com/riverar/mach2/master/features/" & selectedBuild & ".txt", path)
 
             'For each line add a grid view entry
             'Collect all row data first to avoid repeated UI thread invocations
@@ -498,7 +476,7 @@ Public Class GUI
 
                 'Check Line Stage, used for Grouping
                 Try
-                    If CInt(RDDL_Build.Text) >= 17704 Then
+                    If CInt(selectedBuild) >= 17704 Then
                         If Line = "## Unknown:" Then
                             LineStage = "Modifiable"
                         ElseIf Line = "## Always Enabled:" Then
@@ -539,38 +517,21 @@ Public Class GUI
 
             'Add all rows to the grid in a single batch on the UI thread
             Invoke(Sub()
-                       RGV_MainGridView.BeginUpdate()
                        For Each row As Object() In rowData
                            RGV_MainGridView.Rows.Add(row)
                        Next
-                       RGV_MainGridView.EndUpdate()
                    End Sub)
 
             'Move to the first row, remove the selection and change the Status Label to Done.
             Invoke(Sub()
-                       RGV_MainGridView.CurrentRow = RGV_MainGridView.Rows.Item(0)
-                       RGV_MainGridView.CurrentRow = Nothing
+                       If RGV_MainGridView.Rows.Count > 0 Then
+                           RGV_MainGridView.ClearSelection()
+                       End If
                        RLE_StatusLabel.Text = "Done."
                    End Sub)
 
             'Delete Feature List from %TEMP%
             IO.File.Delete(path)
-
-            'Enable Grouping
-            Dim LineGroup As New Telerik.WinControls.Data.GroupDescriptor()
-            LineGroup.GroupNames.Add("FeatureInfo", ComponentModel.ListSortDirection.Ascending)
-            Invoke(Sub() RGV_MainGridView.GroupDescriptors.Add(LineGroup))
-
-            'Enable Animations and selection
-            Invoke(Sub()
-                       Telerik.WinControls.AnimatedPropertySetting.AnimationsEnabled = True
-                       RGV_MainGridView.SelectionMode = GridViewSelectionMode.FullRowSelect
-                   End Sub)
-
-            'Make the Search Row Visible
-            Invoke(Sub()
-                       RGV_MainGridView.MasterView.TableSearchRow.IsVisible = True
-                   End Sub)
         Else
             Return
         End If
@@ -595,14 +556,8 @@ Public Class GUI
     ''' <param name="sender">Default sender Object</param>
     ''' <param name="e">Default EventArgs</param>
     Private Sub RMI_ActivateF_Click(sender As Object, e As EventArgs) Handles RMI_ActivateF.Click
-        'Stop Searching temporarily
-        RGV_MainGridView.MasterView.TableSearchRow.SuspendSearch()
-
         'Set Selected Feature to Enabled
         SetConfig(FeatureEnabledState.Enabled)
-
-        'Resume Searching
-        RGV_MainGridView.MasterView.TableSearchRow.ResumeSearch()
     End Sub
 
     ''' <summary>
@@ -611,14 +566,8 @@ Public Class GUI
     ''' <param name="sender">Default sender Object</param>
     ''' <param name="e">Default EventArgs</param>
     Private Sub RMI_DeactivateF_Click(sender As Object, e As EventArgs) Handles RMI_DeactivateF.Click
-        'Stop Searching temporarily
-        RGV_MainGridView.MasterView.TableSearchRow.SuspendSearch()
-
         'Set Selected Feature to Disabled
         SetConfig(FeatureEnabledState.Disabled)
-
-        'Resume Searching
-        RGV_MainGridView.MasterView.TableSearchRow.ResumeSearch()
     End Sub
 
     ''' <summary>
@@ -627,14 +576,8 @@ Public Class GUI
     ''' <param name="sender">Default sender Object</param>
     ''' <param name="e">Default EventArgs</param>
     Private Sub RMI_RevertF_Click(sender As Object, e As EventArgs) Handles RMI_RevertF.Click
-        'Stop Searching temporarily
-        RGV_MainGridView.MasterView.TableSearchRow.SuspendSearch()
-
         'Set Selected Feature to Default Values
         SetConfig(FeatureEnabledState.Default)
-
-        'Resume Searching
-        RGV_MainGridView.MasterView.TableSearchRow.ResumeSearch()
     End Sub
 
     ''' <summary>
@@ -643,15 +586,21 @@ Public Class GUI
     ''' <param name="FeatureEnabledState">Specifies what Enabled State the Feature should be in. Can be either Enabled, Disabled or Default</param>
     Private Sub SetConfig(FeatureEnabledState As FeatureEnabledState)
         Try
+            If RGV_MainGridView.SelectedRows.Count = 0 Then
+                Return
+            End If
+
             'Initialize Variables
             Dim _enabledStateOptions, _variant, _variantPayloadKind, _variantPayload, _group As Integer
             _enabledStateOptions = 1
             _group = 4
 
+            Dim selectedRow = RGV_MainGridView.SelectedRows(0)
+
             'FeatureConfiguration Variable
             Dim _configs As New List(Of FeatureConfiguration) From {
                 New FeatureConfiguration() With {
-                    .FeatureId = CUInt(RGV_MainGridView.SelectedRows.Item(0).Cells(1).Value),
+                    .FeatureId = CUInt(selectedRow.Cells(1).Value),
                     .EnabledState = FeatureEnabledState,
                     .EnabledStateOptions = _enabledStateOptions,
                     .Group = _group,
@@ -668,29 +617,19 @@ Public Class GUI
             'and RtlFeatureManager.SetLiveFeatureConfigurations(_configs, FeatureConfigurationSection.Runtime) returns 0
             If Not RtlFeatureManager.SetBootFeatureConfigurations(_configs) OrElse RtlFeatureManager.SetLiveFeatureConfigurations(_configs, FeatureConfigurationSection.Runtime) >= 1 Then
                 'Set Status Label
-                RLE_StatusLabel.Text = "An error occurred while setting a feature configuration for " & RGV_MainGridView.SelectedRows.Item(0).Cells(0).Value.ToString
+                RLE_StatusLabel.Text = "An error occurred while setting a feature configuration for " & selectedRow.Cells(0).Value.ToString
 
-                'Fancy Message Box
-                Dim RTD As New RadTaskDialogPage With {
-                    .Caption = " An Error occurred",
-                    .Heading = "An Error occurred while trying to set Feature " & RGV_MainGridView.SelectedRows.Item(0).Cells(0).Value.ToString & " to " & FeatureEnabledState.ToString,
-                    .Icon = RadTaskDialogIcon.Error
-                }
-
-                'Add a Close Button instead of a OK Button
-                RTD.CommandAreaButtons.Add(RadTaskDialogButton.Close)
-
-                'Show the Message Box
-                RadTaskDialog.ShowDialog(RTD)
+                'Show error dialog
+                DialogHelper.ShowErrorDialog(" An Error occurred", "An Error occurred while trying to set Feature " & selectedRow.Cells(0).Value.ToString & " to " & FeatureEnabledState.ToString)
             Else
                 'Set Status Label
-                RLE_StatusLabel.Text = "Successfully set feature configuration for" & RGV_MainGridView.SelectedRows.Item(0).Cells(0).Value.ToString & " with Value " & FeatureEnabledState.ToString
+                RLE_StatusLabel.Text = "Successfully set feature configuration for" & selectedRow.Cells(0).Value.ToString & " with Value " & FeatureEnabledState.ToString
 
                 'Set Cell Text
-                RGV_MainGridView.CurrentRow.Cells.Item(2).Value = FeatureEnabledState.ToString
+                selectedRow.Cells(2).Value = FeatureEnabledState.ToString
 
-                'Fancy Message Box
-                DialogHelper.ShowSuccessDialog(" Success", "Successfully set Feature " & RGV_MainGridView.SelectedRows.Item(0).Cells(0).Value.ToString & " to " & FeatureEnabledState.ToString)
+                'Show success dialog
+                DialogHelper.ShowSuccessDialog(" Success", "Successfully set Feature " & selectedRow.Cells(0).Value.ToString & " to " & FeatureEnabledState.ToString)
             End If
         Catch ex As Exception
             'Catch Any Exception that may occur
@@ -704,7 +643,7 @@ Public Class GUI
     ''' <param name="sender">Default sender Object</param>
     ''' <param name="e">Default EventArgs</param>
     Private Sub RGV_MainGridView_SelectionChanged(sender As Object, e As EventArgs) Handles RGV_MainGridView.SelectionChanged
-        If RGV_MainGridView.CurrentRow Is Nothing Then
+        If RGV_MainGridView.SelectedRows.Count = 0 Then
             RDDB_PerformAction.Enabled = False
         Else
             RDDB_PerformAction.Enabled = True
@@ -767,5 +706,30 @@ Public Class GUI
     Private Sub GUI_FormClosing(sender As Object, e As FormClosingEventArgs) Handles Me.FormClosing
         'Exit all running Threads forcefully, should fix ObjectDisposed Exceptions
         Diagnostics.Process.GetCurrentProcess().Kill()
+    End Sub
+
+    ''' <summary>
+    ''' Handle the Perform Action button click to show the context menu
+    ''' </summary>
+    Private Sub RDDB_PerformAction_Click(sender As Object, e As EventArgs)
+        ActionContextMenu.Show(RDDB_PerformAction, New System.Drawing.Point(0, RDDB_PerformAction.Height))
+    End Sub
+
+    ''' <summary>
+    ''' Handle search text changed to filter the grid
+    ''' </summary>
+    Private Sub TB_Search_TextChanged(sender As Object, e As EventArgs)
+        Dim searchText As String = TB_Search.Text.ToLower()
+        For Each row As DataGridViewRow In RGV_MainGridView.Rows
+            If row.IsNewRow Then Continue For
+            Dim visible As Boolean = False
+            For Each cell As DataGridViewCell In row.Cells
+                If cell.Value IsNot Nothing AndAlso cell.Value.ToString().ToLower().Contains(searchText) Then
+                    visible = True
+                    Exit For
+                End If
+            Next
+            row.Visible = visible OrElse String.IsNullOrEmpty(searchText)
+        Next
     End Sub
 End Class

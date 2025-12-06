@@ -13,12 +13,26 @@
 '
 'You should have received a copy of the GNU General Public License
 'along with this program.  If not, see <https://www.gnu.org/licenses/>.
-Imports Albacore.ViVe, Telerik.WinControls.UI
+Imports Albacore.ViVe
 
 ''' <summary>
 ''' ViVeTool GUI - Manual Feature ID UI
 ''' </summary>
 Public Class SetManual
+    ''' <summary>
+    ''' Form Load Event - Set up the button click handler
+    ''' </summary>
+    Private Sub SetManual_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        AddHandler RDDB_PerformAction.Click, AddressOf RDDB_PerformAction_Click
+    End Sub
+
+    ''' <summary>
+    ''' Handle the Perform Action button click to show the context menu
+    ''' </summary>
+    Private Sub RDDB_PerformAction_Click(sender As Object, e As EventArgs)
+        ActionContextMenu.Show(RDDB_PerformAction, New System.Drawing.Point(0, RDDB_PerformAction.Height))
+    End Sub
+
     ''' <summary>
     ''' Set's the Feature Configuration. Uses the FeatureEnabledState parameter to set the EnabledState of the Feature
     ''' </summary>

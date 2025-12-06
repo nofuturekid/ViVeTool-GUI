@@ -14,7 +14,6 @@
 'You should have received a copy of the GNU General Public License
 'along with this program.  If not, see <https://www.gnu.org/licenses/>.
 Option Strict On
-Imports Telerik.WinControls, Telerik.WinControls.UI
 
 ''' <summary>
 ''' ViVeTool GUI - Feature Scanner
@@ -97,7 +96,7 @@ Public Class ScannerUI
     Private Sub CheckPreReq()
         'First disable the Buttons
         Invoke(Sub()
-                   RPBE_StatusProgressBar.Value1 = 10
+                   RPBE_StatusProgressBar.Value = 10
                    RB_Continue.Enabled = False
                    RB_DbgPath_Browse.Enabled = False
                    RB_SymbolPath_Browse.Enabled = False
@@ -106,20 +105,12 @@ Public Class ScannerUI
 #Region "1. Check RTB_DbgPath"
         'Check if the Path to symchk.exe is correct and if symchk.exe exists
         If RTB_DbgPath.Text.EndsWith("\symchk.exe") AndAlso IO.File.Exists(RTB_DbgPath.Text) Then
-            Invoke(Sub() RPBE_StatusProgressBar.Value1 = 50)
+            Invoke(Sub() RPBE_StatusProgressBar.Value = 50)
         Else
-            Dim RTD As New RadTaskDialogPage With {
-                    .Caption = " An Error occurred",
-                    .Heading = "An Error occurred",
-                    .Text = "An Error occurred while checking if the specified Path to symchk.exe is valid." & vbNewLine & vbNewLine & "Please be sure to enter a valid path to symchk.exe." & vbNewLine & "If you can not find symchk.exe, it is usually located at the Installation Directory of the Windows SDK\10\Debuggers\x64",
-                    .Icon = RadTaskDialogIcon.ShieldErrorRedBar
-                }
-
-            'Show the Message Box
-            RadTaskDialog.ShowDialog(RTD)
+            DialogHelper.ShowErrorDialog(" An Error occurred", "An Error occurred while checking if the specified Path to symchk.exe is valid." & vbNewLine & vbNewLine & "Please be sure to enter a valid path to symchk.exe." & vbNewLine & "If you can not find symchk.exe, it is usually located at the Installation Directory of the Windows SDK\10\Debuggers\x64")
 
             Invoke(Sub()
-                       RPBE_StatusProgressBar.Value1 = 0
+                       RPBE_StatusProgressBar.Value = 0
                        RTB_DbgPath.Text = Nothing
                        RB_Continue.Enabled = True
                        RB_DbgPath_Browse.Enabled = True
@@ -130,7 +121,7 @@ Public Class ScannerUI
 
 #Region "2. Check RTB_SymbolPath"
         'Check if the Application has Write Access to the specified symbol path
-        Invoke(Sub() RPBE_StatusProgressBar.Value1 = 80)
+        Invoke(Sub() RPBE_StatusProgressBar.Value = 80)
 
         'If the Path in RTB_SymbolPath exists, and try to write a Test File to it
         If IO.Directory.Exists(RTB_SymbolPath.Text) Then
@@ -143,17 +134,10 @@ Public Class ScannerUI
                 If IO.File.ReadAllText(RTB_SymbolPath.Text & "\Test.txt").Contains("Test File") Then
                     IO.File.Delete(RTB_SymbolPath.Text & "\Test.txt")
                 Else
-                    Dim RTD As New RadTaskDialogPage With {
-                        .Caption = " An Error occurred",
-                        .Heading = "An Error occurred",
-                        .Text = "An Error occurred while trying to write a test file to " & RTB_SymbolPath.Text & vbNewLine & vbNewLine & "Please make sure that the application has write access to the folder, and that the folder isn't write protected.",
-                        .Icon = RadTaskDialogIcon.ShieldErrorRedBar
-                    }
-                    'Show the Message Box
-                    RadTaskDialog.ShowDialog(RTD)
+                    DialogHelper.ShowErrorDialog(" An Error occurred", "An Error occurred while trying to write a test file to " & RTB_SymbolPath.Text & vbNewLine & vbNewLine & "Please make sure that the application has write access to the folder, and that the folder isn't write protected.")
 
                     Invoke(Sub()
-                               RPBE_StatusProgressBar.Value1 = 0
+                               RPBE_StatusProgressBar.Value = 0
                                RTB_SymbolPath.Text = Nothing
                                RB_Continue.Enabled = True
                                RB_DbgPath_Browse.Enabled = True
@@ -164,7 +148,7 @@ Public Class ScannerUI
                 DialogHelper.ShowExceptionDialog(" An Exception occurred", "An Exception occurred", ex.Message, "An Exception occurred while trying to write a test file to " & RTB_SymbolPath.Text & vbNewLine & vbNewLine & "Please make sure that the application has write access to the folder, and that the folder isn't write protected.")
 
                 Invoke(Sub()
-                           RPBE_StatusProgressBar.Value1 = 0
+                           RPBE_StatusProgressBar.Value = 0
                            RTB_SymbolPath.Text = Nothing
                            RB_Continue.Enabled = True
                            RB_DbgPath_Browse.Enabled = True
@@ -172,10 +156,10 @@ Public Class ScannerUI
                        End Sub)
             End Try
         Else
-            DialogHelper.ShowErrorDialog(" An Error occurred", "An Error occurred", "An Error occurred while trying to write a test file to the symbol folder." & vbNewLine & vbNewLine & "A symbol folder must be specified to download Program Debug Database files into.", RadTaskDialogIcon.ShieldErrorRedBar)
+            DialogHelper.ShowErrorDialog(" An Error occurred", "An Error occurred while trying to write a test file to the symbol folder." & vbNewLine & vbNewLine & "A symbol folder must be specified to download Program Debug Database files into.")
 
             Invoke(Sub()
-                       RPBE_StatusProgressBar.Value1 = 0
+                       RPBE_StatusProgressBar.Value = 0
                        RTB_SymbolPath.Text = Nothing
                        RB_Continue.Enabled = True
                        RB_DbgPath_Browse.Enabled = True
@@ -186,14 +170,14 @@ Public Class ScannerUI
 
         'Now if both Text Boxes aren't empty, enable the Download PDB Tab
         If RTB_SymbolPath.Text = Nothing OrElse RTB_DbgPath.Text = Nothing Then
-            Invoke(Sub() RPBE_StatusProgressBar.Value1 = 0)
+            Invoke(Sub() RPBE_StatusProgressBar.Value = 0)
         Else
             'Disable the current Tab and move to the Download PDB Tab
             Invoke(Sub()
-                       RPBE_StatusProgressBar.Value1 = 100
-                       RPVP_DownloadPDB.Enabled = True
-                       RPV_Main.SelectedPage = RPVP_DownloadPDB
-                       RPVP_Setup.Enabled = False
+                       RPBE_StatusProgressBar.Value = 100
+                       TabPage_DownloadPDB.Enabled = True
+                       TabControl_Main.SelectedTab = TabPage_DownloadPDB
+                       TabPage_Setup.Enabled = False
                    End Sub)
 
             'Save the Paths to My.Settings
@@ -224,13 +208,6 @@ Public Class ScannerUI
             .RedirectStandardOutput = True 'Enables Redirection of Standard Output
         End With
 
-        Dim RTD_SymChk As New RadTaskDialogPage With {
-                                .Caption = " An Error occurred",
-                                .Heading = "An Error occurred",
-                                .Text = "An Error occurred while downloading the symbol files." & vbNewLine & vbNewLine & "Check if yo have access to symchk.exe and that your Antivirus isn't blocking it.",
-                                .Icon = RadTaskDialogIcon.ShieldErrorRedBar
-                            }
-
         'Get the .pdb files of C:\Windows\*.* - Recursively
         Try
             Proc.StartInfo.Arguments = "/r ""C:\Windows"" /oc """ & My.Settings.SymbolPath & """ /cn"
@@ -241,8 +218,7 @@ Public Class ScannerUI
             Proc.CancelOutputRead()
             Proc.CancelErrorRead()
         Catch ex As Exception
-            'Show the Message Box
-            RadTaskDialog.ShowDialog(RTD_SymChk)
+            DialogHelper.ShowErrorDialog(" An Error occurred", "An Error occurred while downloading the symbol files." & vbNewLine & vbNewLine & "Check if you have access to symchk.exe and that your Antivirus isn't blocking it.")
         End Try
 
         'Get the .pdb files of C:\Program Files\*.* - Recursively
@@ -255,8 +231,7 @@ Public Class ScannerUI
             Proc.CancelOutputRead()
             Proc.CancelErrorRead()
         Catch ex As Exception
-            'Show the Message Box
-            RadTaskDialog.ShowDialog(RTD_SymChk)
+            DialogHelper.ShowErrorDialog(" An Error occurred", "An Error occurred while downloading the symbol files." & vbNewLine & vbNewLine & "Check if you have access to symchk.exe and that your Antivirus isn't blocking it.")
         End Try
 
         'Get the .pdb files of C:\Program Files (x86)\*.* - Recursively
@@ -269,15 +244,14 @@ Public Class ScannerUI
             Proc.CancelOutputRead()
             Proc.CancelErrorRead()
         Catch ex As Exception
-            'Show the Message Box
-            RadTaskDialog.ShowDialog(RTD_SymChk)
+            DialogHelper.ShowErrorDialog(" An Error occurred", "An Error occurred while downloading the symbol files." & vbNewLine & vbNewLine & "Check if you have access to symchk.exe and that your Antivirus isn't blocking it.")
         End Try
 
         'Disable the current tab and move to the Scan PDB Tab
         Invoke(Sub()
-                   RPVP_ScanPDB.Enabled = True
-                   RPV_Main.SelectedPage = RPVP_ScanPDB
-                   RPVP_DownloadPDB.Enabled = False
+                   TabPage_ScanPDB.Enabled = True
+                   TabControl_Main.SelectedTab = TabPage_ScanPDB
+                   TabPage_DownloadPDB.Enabled = False
                End Sub)
         ScanPDBFiles()
     End Sub
@@ -366,14 +340,7 @@ Public Class ScannerUI
 
             If Proc.ExitCode >= 1 Then
                 Invoke(Sub()
-                           Dim RTD As New RadTaskDialogPage With {
-                                .Caption = " An Error occurred",
-                                .Heading = "An Error occurred",
-                                .Text = "An Error occurred while scanning the symbol files." & vbNewLine & vbNewLine & "The application will attempt to rescan the symbol folder.",
-                                .Icon = RadTaskDialogIcon.ShieldErrorRedBar
-                            }
-                           'Show the Message Box
-                           RadTaskDialog.ShowDialog(RTD)
+                           DialogHelper.ShowErrorDialog(" An Error occurred", "An Error occurred while scanning the symbol files." & vbNewLine & vbNewLine & "The application will attempt to rescan the symbol folder.")
                        End Sub)
             Else
                 mach2_ExitCode = 0
@@ -382,9 +349,9 @@ Public Class ScannerUI
 
         'Disable the current tab and move to the Done Tab
         Invoke(Sub()
-                   RPVP_Done.Enabled = True
-                   RPV_Main.SelectedPage = RPVP_Done
-                   RPVP_ScanPDB.Enabled = False
+                   TabPage_Done.Enabled = True
+                   TabControl_Main.SelectedTab = TabPage_Done
+                   TabPage_ScanPDB.Enabled = False
                End Sub)
         Done()
     End Sub
@@ -470,23 +437,10 @@ Public Class ScannerUI
         'Show Notification
         Invoke(Sub()
                    Try
-                       Dim RDA_Done As New RadDesktopAlert With {
-                        .CaptionText = "Debug Symbol Scan complete",
-                        .ContentText = "The Debug Symbol Scan is complete. Return to the ViVeTool GUI Feature Scanner to find out more.",
-                        .Opacity = 1,
-                        .ShowCloseButton = True,
-                        .ShowPinButton = False,
-                        .ShowOptionsButton = False,
-                        .AutoClose = False,
-                        .AutoSize = True,
-                        .CanMove = False,
-                        .FadeAnimationType = FadeAnimationType.FadeOut,
-                        .IsPinned = True,
-                        .PopupAnimationDirection = RadDirection.Up
-                    }
-                       RDA_Done.Show()
+                       'Use a simple notification icon instead of RadDesktopAlert
+                       MsgBox("The Debug Symbol Scan is complete. Return to the ViVeTool GUI Feature Scanner to find out more.", vbInformation, "Debug Symbol Scan complete")
                    Catch ex As Exception
-                       'Sometimes, again rarely the RadDesktopAlert will fail so we fall back to a god ol' message box
+                       'Sometimes the message box may fail, so we catch any exception
                        MsgBox("The Debug Symbol Scan is complete. Return to the ViVeTool GUI Feature Scanner to find out more.", vbInformation, "Debug Symbol Scan complete")
                    End Try
                End Sub)
@@ -544,26 +498,26 @@ Public Class ScannerUI
     End Sub
 
     ''' <summary>
-    ''' Changes the Application theme depending on the ToggleState
+    ''' Changes the Application theme depending on the CheckState
     ''' </summary>
     ''' <param name="sender">Default sender Object</param>
-    ''' <param name="args">StateChanging EventArgs</param>
-    Private Sub RTB_ThemeToggle_ToggleStateChanging(sender As Object, args As StateChangingEventArgs) Handles RTB_ThemeToggle.ToggleStateChanging
-        If args.NewValue = Telerik.WinControls.Enumerations.ToggleState.On Then
-            ThemeHelper.ApplyDarkTheme(RTB_ThemeToggle, My.Resources.icons8_moon_and_stars_24)
+    ''' <param name="e">Default EventArgs</param>
+    Private Sub CB_ThemeToggle_CheckedChanged(sender As Object, e As EventArgs) Handles CB_ThemeToggle.CheckedChanged
+        If CB_ThemeToggle.Checked Then
+            ThemeHelper.ApplyDarkTheme(CB_ThemeToggle, My.Resources.icons8_moon_and_stars_24)
         Else
-            ThemeHelper.ApplyLightTheme(RTB_ThemeToggle, My.Resources.icons8_sun_24)
+            ThemeHelper.ApplyLightTheme(CB_ThemeToggle, My.Resources.icons8_sun_24)
         End If
     End Sub
 
     ''' <summary>
-    ''' Changes the Application theme, using the System Theme depending on the ToggleState
+    ''' Changes the Application theme, using the System Theme depending on the CheckState
     ''' </summary>
     ''' <param name="sender">Default sender Object</param>
-    ''' <param name="args">StateChanged EventArgs</param>
-    Private Sub RTB_UseSystemTheme_ToggleStateChanged(sender As Object, args As StateChangedEventArgs) Handles RTB_UseSystemTheme.ToggleStateChanged
-        If args.ToggleState = Telerik.WinControls.Enumerations.ToggleState.On Then
-            ThemeHelper.ApplySystemTheme(RTB_ThemeToggle, My.Resources.icons8_moon_and_stars_24, My.Resources.icons8_sun_24)
+    ''' <param name="e">Default EventArgs</param>
+    Private Sub CB_UseSystemTheme_CheckedChanged(sender As Object, e As EventArgs) Handles CB_UseSystemTheme.CheckedChanged
+        If CB_UseSystemTheme.Checked Then
+            ThemeHelper.ApplySystemTheme(CB_ThemeToggle, My.Resources.icons8_moon_and_stars_24, My.Resources.icons8_sun_24)
         Else
             ThemeHelper.DisableSystemTheme()
         End If
