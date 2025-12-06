@@ -192,11 +192,11 @@
                                    Foreground="{DynamicResource PrimaryForegroundBrush}"
                                    Margin="0,0,0,10" />
 
-                        <Button Content="Launch Feature Scanner"
+                        <Button Content="Open Feature Scanner"
                                 Command="{Binding LaunchFeatureScannerCommand}"
                                 Margin="0,0,0,8"
                                 HorizontalAlignment="Stretch"
-                                ToolTip="Launch the Feature Scanner to scan for hidden Windows features" />
+                                ToolTip="Open the integrated Feature Scanner to scan for hidden Windows features" />
 
                         <!-- Publish Feature List Panel -->
                         <Border Visibility="{Binding CanShowPublishPanel, Converter={StaticResource BoolToVisibilityConverter}}"

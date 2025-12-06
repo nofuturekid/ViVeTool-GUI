@@ -32,8 +32,8 @@ Namespace ViewModels
     Partial Public Class MainViewModel
         Inherits ObservableObject
 
-        ' Constants
-        Private Const FeatureScannerExecutable As String = "ViVeTool_GUI.FeatureScanner.exe"
+        ' Constants - Legacy external scanner EXE is no longer used
+        ' The scanner is now integrated into the WPF app via FeatureScannerDialog
 
         Private ReadOnly _featureService As FeatureService
         Private ReadOnly _gitHubService As GitHubService
@@ -571,35 +571,41 @@ Namespace ViewModels
 
         ''' <summary>
         ''' Executes the launch feature scanner command.
+        ''' Opens the integrated Feature Scanner dialog instead of launching an external EXE.
         ''' </summary>
         Private Sub ExecuteLaunchFeatureScanner()
             Try
-                ' Try to find the Feature Scanner executable in the application directory
-                Dim appDirectory = AppDomain.CurrentDomain.BaseDirectory
-                Dim scannerPath = System.IO.Path.Combine(appDirectory, FeatureScannerExecutable)
+                ' Get the current window as owner for the dialog
+                Dim mainWindow = System.Windows.Application.Current?.MainWindow
 
-                If Not System.IO.File.Exists(scannerPath) Then
-                    ' Try alternative path (development scenario)
-                    Dim parentDir = System.IO.Directory.GetParent(appDirectory)?.FullName
-                    If parentDir IsNot Nothing Then
-                        scannerPath = System.IO.Path.Combine(parentDir, "ViVeTool-GUI.FeatureScanner", "bin", "Debug", FeatureScannerExecutable)
-                    End If
-                End If
-
-                If System.IO.File.Exists(scannerPath) Then
-                    Dim startInfo = New System.Diagnostics.ProcessStartInfo With {
-                        .FileName = scannerPath,
-                        .UseShellExecute = True
-                    }
-                    System.Diagnostics.Process.Start(startInfo)
-                    StatusMessage = "Feature Scanner launched. After successful scan, you can publish the feature list."
-                    ' Show the publish panel after launching the scanner
-                    CanShowPublishPanel = True
+                ' Create and show the Feature Scanner dialog
+                Dim dialog As Views.FeatureScannerDialog
+                If mainWindow IsNot Nothing Then
+                    dialog = New Views.FeatureScannerDialog(mainWindow)
                 Else
-                    StatusMessage = $"Feature Scanner not found. Please ensure {FeatureScannerExecutable} is available."
+                    dialog = New Views.FeatureScannerDialog()
                 End If
+
+                StatusMessage = "Feature Scanner opened."
+
+                ' Show the dialog
+                Dim result = dialog.ShowDialog()
+
+                ' Check if we have a successful scan result
+                If result = True AndAlso dialog.ScanResult IsNot Nothing AndAlso dialog.ScanResult.Success Then
+                    ' Populate the publish panel with the scan result
+                    SetScannerResult(dialog.ScanResult.OutputFilePath, Services.FeatureScannerService.GetCurrentBuildNumber())
+                    StatusMessage = "Feature Scanner completed. Publish panel populated with scan result."
+                ElseIf dialog.ScanResult IsNot Nothing AndAlso dialog.ScanResult.IsCancelled Then
+                    StatusMessage = "Feature Scanner was cancelled."
+                Else
+                    ' Still show publish panel for manual entry
+                    CanShowPublishPanel = True
+                    StatusMessage = "Feature Scanner closed."
+                End If
+
             Catch ex As Exception
-                StatusMessage = $"Error launching Feature Scanner: {ex.Message}"
+                StatusMessage = $"Error opening Feature Scanner: {ex.Message}"
             End Try
         End Sub
 
