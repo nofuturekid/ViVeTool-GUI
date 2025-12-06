@@ -142,8 +142,14 @@ Namespace Services
                 Dim progress = CInt((currentIndex / CDbl(totalDirectories)) * 50) ' First 50% is download
                 RaiseEvent ProgressChanged(Me, New ScanProgressEventArgs(progress, $"Downloading symbols from {directory}..."))
 
+                ' Build the command arguments
+                Dim arguments = $"/r ""{directory}"" /oc ""{symbolPath}"" /cn"
+                
+                ' Log the exact symchk command being executed (verbose output like WinForms version)
+                RaiseEvent OutputReceived(Me, $"Executing: {debuggerPath} {arguments}")
+
                 Try
-                    Dim result = Await RunProcessAsync(debuggerPath, $"/r ""{directory}"" /oc ""{symbolPath}"" /cn", AppDomain.CurrentDomain.BaseDirectory, cancellationToken)
+                    Dim result = Await RunProcessAsync(debuggerPath, arguments, AppDomain.CurrentDomain.BaseDirectory, cancellationToken)
                     If Not result.Success AndAlso Not cancellationToken.IsCancellationRequested Then
                         RaiseEvent OutputReceived(Me, $"Warning: Error downloading symbols from {directory}: {result.ErrorMessage}")
                     End If

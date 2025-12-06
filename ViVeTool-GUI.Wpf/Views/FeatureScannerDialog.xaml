@@ -67,10 +67,18 @@
             </Grid.ColumnDefinitions>
 
             <!-- Symbol Path -->
-            <TextBlock Grid.Row="0" Grid.Column="0" 
-                       Text="Symbol Path:" 
-                       VerticalAlignment="Center"
-                       Foreground="{DynamicResource PrimaryForegroundBrush}" />
+            <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="Symbol Path:" 
+                           Foreground="{DynamicResource PrimaryForegroundBrush}" />
+                <TextBlock Text="&#xE946;" 
+                           FontFamily="Segoe MDL2 Assets" 
+                           FontSize="12"
+                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                           Margin="6,0,0,0"
+                           VerticalAlignment="Center"
+                           ToolTip="Folder where downloaded PDB files are stored (needs ~5–8 GB free space)."
+                           Cursor="Help" />
+            </StackPanel>
             <TextBox Grid.Row="0" Grid.Column="1" 
                      Text="{Binding SymbolPath, UpdateSourceTrigger=PropertyChanged}"
                      IsEnabled="{Binding IsScanning, Converter={StaticResource InverseBoolConverter}}"
@@ -82,11 +90,18 @@
                     Width="80" />
 
             <!-- Debugger Path -->
-            <TextBlock Grid.Row="1" Grid.Column="0" 
-                       Text="Debugger Path:" 
-                       VerticalAlignment="Center"
-                       Foreground="{DynamicResource PrimaryForegroundBrush}"
-                       Margin="0,10,0,0" />
+            <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,10,0,0">
+                <TextBlock Text="Debugger Path:" 
+                           Foreground="{DynamicResource PrimaryForegroundBrush}" />
+                <TextBlock Text="&#xE946;" 
+                           FontFamily="Segoe MDL2 Assets" 
+                           FontSize="12"
+                           Foreground="{DynamicResource SecondaryForegroundBrush}"
+                           Margin="6,0,0,0"
+                           VerticalAlignment="Center"
+                           ToolTip="Path to symchk.exe from Windows Debugging Tools (used to download symbols)."
+                           Cursor="Help" />
+            </StackPanel>
             <TextBox Grid.Row="1" Grid.Column="1" 
                      Text="{Binding DebuggerPath, UpdateSourceTrigger=PropertyChanged}"
                      IsEnabled="{Binding IsScanning, Converter={StaticResource InverseBoolConverter}}"
