@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>ViVeTool_GUI.Wpf</RootNamespace>
+    <AssemblyName>ViVeTool_GUI.Wpf</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <OptionExplicit>On</OptionExplicit>
+    <OptionStrict>On</OptionStrict>
+    <OptionInfer>On</OptionInfer>
+    <ApplicationIcon>Resources\icon.ico</ApplicationIcon>
+    <PlatformTarget>x64</PlatformTarget>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    
+    <!-- TODO: For self-contained x64 distribution, uncomment and configure the following:
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Albacore.ViVe">
+      <HintPath>..\lib\Albacore.ViVe.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\icon.ico" />
+    <Resource Include="Resources\Icons\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ApplicationDefinition Include="App.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </ApplicationDefinition>
+    <Page Remove="App.xaml" />
+  </ItemGroup>
+
+</Project>
