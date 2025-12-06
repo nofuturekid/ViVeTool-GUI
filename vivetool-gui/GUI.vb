@@ -26,6 +26,11 @@ Public Class GUI
     Private Const WM_SYSCOMMAND As Integer = &H112
     Private Const MF_STRING As Integer = &H0
     Private Const MF_SEPARATOR As Integer = &H800
+
+    ''' <summary>
+    ''' GitHub repository owner for update checks and User-Agent identification
+    ''' </summary>
+    Private Const GITHUB_REPO_OWNER As String = "mta1124-1629472"
     ReadOnly TempJSONUsedInDevelopment As String = "{
   ""sha"": ""afeb63367f1bd15d63cfe30541a9a6ee51b940dd"",
   ""url"": ""https://api.github.com/repos/riverar/mach2/git/trees/afeb63367f1bd15d63cfe30541a9a6ee51b940dd"",
@@ -73,6 +78,15 @@ Public Class GUI
   ""truncated"": false
 }"
     Dim LineStage As String = String.Empty
+
+    ''' <summary>
+    ''' Gets the User-Agent string for HTTP requests
+    ''' </summary>
+    Private ReadOnly Property UserAgent As String
+        Get
+            Return String.Format("{0}/{1} (+https://github.com/{2}/ViVeTool-GUI)", My.Application.Info.ProductName, My.Application.Info.Version.ToString, GITHUB_REPO_OWNER)
+        End Get
+    End Property
 
     ''' <summary>
     ''' P/Invoke declaration. Used to Insert the About Menu Element, into the System Menu. Function get's the System Menu
@@ -125,12 +139,7 @@ Public Class GUI
     ''' </summary>
     Private Sub BackgroundTasks()
         'Check for Updates
-        Try
-            AutoUpdater.Start("https://raw.githubusercontent.com/PeterStrick/ViVeTool-GUI/master/UpdaterXML.xml")
-        Catch ex As Exception
-            'Log the exception but continue with startup
-            Diagnostics.Debug.WriteLine("AutoUpdater.Start failed (" & ex.GetType().Name & "): " & ex.Message)
-        End Try
+        AutoUpdater.Start("https://raw.githubusercontent.com/PeterStrick/ViVeTool-GUI/master/UpdaterXML.xml")
 
         'Populate the Build Combo Box, but first check if the PC is connected to the Internet, otherwise the GUI will crash without giving any helpful Information on WHY
         PopulateBuildComboBox_Check()
@@ -180,7 +189,7 @@ Public Class GUI
             .Encoding = System.Text.Encoding.UTF8
         }
         WebClientRepo.Headers.Add(HttpRequestHeader.ContentType, "application/json; charset=utf-8")
-        WebClientRepo.Headers.Add(HttpRequestHeader.UserAgent, "PeterStrick/vivetool-gui")
+        WebClientRepo.Headers.Add(HttpRequestHeader.UserAgent, UserAgent)
 
         'Get the "tree" array from the API JSON Result
         Try
@@ -209,7 +218,7 @@ Public Class GUI
             .Encoding = System.Text.Encoding.UTF8
         }
         WebClientFeatures.Headers.Add(HttpRequestHeader.ContentType, "application/json; charset=utf-8")
-        WebClientFeatures.Headers.Add(HttpRequestHeader.UserAgent, "PeterStrick/vivetool-gui")
+        WebClientFeatures.Headers.Add(HttpRequestHeader.UserAgent, UserAgent)
 
         'Get the "tree" array from the API JSON Result
         Try
@@ -492,7 +501,7 @@ Public Class GUI
             Dim WebClient As New WebClient With {
                     .Encoding = System.Text.Encoding.UTF8
                 }
-            WebClient.Headers.Add("User-Agent", "PeterStrick/vivetool-gui")
+            WebClient.Headers.Add(HttpRequestHeader.UserAgent, UserAgent)
             Dim path As String = IO.Path.GetTempPath & selectedBuild & ".txt"
             WebClient.DownloadFile("https://raw.githubusercontent.com/riverar/mach2/master/features/" & selectedBuild & ".txt", path)
 
