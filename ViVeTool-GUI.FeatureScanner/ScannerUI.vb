@@ -24,6 +24,14 @@ Public Class ScannerUI
     Private Delegate Sub AppendStdErrDelegate(text As String)
     Public BuildNumber As String = My.Computer.Registry.GetValue("HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion", "CurrentBuildNumber", Nothing).ToString
 
+    ' Shared ToolTip for controls
+    Private ReadOnly _toolTip As New ToolTip With {
+        .AutoPopDelay = 15000,
+        .InitialDelay = 300,
+        .ReshowDelay = 100,
+        .ShowAlways = True
+    }
+
     ''' <summary>
     ''' Debugging Tools/symchk.exe Path Browse Button
     ''' </summary>
@@ -55,26 +63,6 @@ Public Class ScannerUI
         If FBD.ShowDialog() = DialogResult.OK Then
             RTB_SymbolPath.Text = FBD.SelectedPath
         End If
-    End Sub
-
-    ''' <summary>
-    ''' Show a ToolTip for 15 Seconds when hovering over RTB_SymbolPath
-    ''' </summary>
-    ''' <param name="sender">Default sender Object</param>
-    ''' <param name="e">ToolTipTextNeeded EventArgs</param>
-    Private Sub RTB_DbgPath_ToolTipTextNeeded(sender As Object, e As ToolTipTextNeededEventArgs) Handles RTB_DbgPath.ToolTipTextNeeded
-        e.ToolTip.AutoPopDelay = 15000
-        e.ToolTipText = "Example Path: C:\Program Files\Windows Kits\10\Debuggers\x64\symchk.exe"
-    End Sub
-
-    ''' <summary>
-    ''' Show a ToolTip for 15 Seconds when hovering over RTB_SymbolPath
-    ''' </summary>
-    ''' <param name="sender">Default sender Object</param>
-    ''' <param name="e">ToolTipTextNeeded EventArgs</param>
-    Private Sub RTB_SymbolPath_ToolTipTextNeeded(sender As Object, e As ToolTipTextNeededEventArgs) Handles RTB_SymbolPath.ToolTipTextNeeded
-        e.ToolTip.AutoPopDelay = 15000
-        e.ToolTipText = "The Downloaded Debug Symbols can be up to 5~8GB in size."
     End Sub
 
     ''' <summary>
@@ -495,6 +483,10 @@ Public Class ScannerUI
         RL_Version.Text = String.Format("Version {0}", My.Application.Info.Version.ToString)
         RL_License.Text = My.Application.Info.Copyright
         RL_Description.Text = My.Application.Info.Description
+
+        ' Initialize tooltips for text boxes
+        _toolTip.SetToolTip(RTB_DbgPath, "Example Path: C:\Program Files\Windows Kits\10\Debuggers\x64\symchk.exe")
+        _toolTip.SetToolTip(RTB_SymbolPath, "The downloaded Debug Symbols can be up to 5~8GB in size.")
     End Sub
 
     ''' <summary>
