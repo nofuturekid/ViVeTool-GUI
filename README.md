@@ -88,6 +88,10 @@ ViVeTool GUI is a modern, user-friendly graphical interface for managing hidden 
 - ✅ **Feature Scanner Integration** - Built-in discovery tools for new features
 - ✅ **GitHub Actions Publishing** - Direct feature list publishing for maintainers
 
+**Not Implemented:**
+- ❌ Store/A/B Testing repair tools
+- ❌ Multi-language localization
+
 **Recommended For:**
 - Windows 11 users
 - Users wanting the latest UI/UX improvements
@@ -102,17 +106,24 @@ ViVeTool GUI is a modern, user-friendly graphical interface for managing hidden 
 - ✅ Feature grouping and sorting
 - ✅ Basic theme support (Windows default)
 - ✅ Multi-build feature list loading
-- ❌ No Windows 11 Fluent Design
-- ❌ No advanced theme customization
-- ❌ Limited feature scanning capabilities
-- ❌ No smart caching system
-- ❌ No GitHub Actions publishing
+- ✅ Multi-language localization support
+- ✅ Store/A/B Testing repair tools
+- ✅ LastKnownGood Store fixing capabilities
+
+**Not Implemented:**
+- ❌ Windows 11 Fluent Design
+- ❌ Advanced theme customization (light/dark/system modes)
+- ❌ Accent color integration
+- ❌ Smart caching system (ETag-based)
+- ❌ GitHub Actions publishing
+- ❌ Modern .NET runtime benefits
 
 **Recommended For:**
 - Windows 10 users
+- Users needing store repair functionality
+- Users requiring multi-language support
 - Legacy system compatibility
 - Minimal resource usage requirements
-- Users preferring traditional UI style
 
 ### Direct Feature Comparison
 
@@ -121,6 +132,9 @@ ViVeTool GUI is a modern, user-friendly graphical interface for managing hidden 
 | **UI Framework** | Windows 11 Fluent | Classic WinForms |
 | **Theme Support** | Light/Dark/System | Windows Default |
 | **Accent Color Integration** | ✅ | ❌ |
+| **Multi-Language Support** | ❌ | ✅ |
+| **Store Repair Tools** | ❌ | ✅ |
+| **A/B Testing Fix** | ❌ | ✅ |
 | **Feature Scanner** | ✅ Advanced | ⚠️ Limited |
 | **Smart Caching** | ✅ ETag-based | ⚠️ Basic |
 | **GitHub Publishing** | ✅ Native | ❌ |
@@ -133,6 +147,8 @@ ViVeTool GUI is a modern, user-friendly graphical interface for managing hidden 
 ### Migration Path
 
 If you're currently using the **Legacy WinForms version**, see [MIGRATION_NOTES.md](https://github.com/mta1124-1629472/ViVeTool-GUI/blob/master/MIGRATION_NOTES.md) for detailed migration instructions to the new WPF version.
+
+**Note:** Some features from the Legacy version (Store repair, multi-language support) are not yet implemented in the WPF version. This is being tracked for future releases.
 
 ## Feature Feed System
 
