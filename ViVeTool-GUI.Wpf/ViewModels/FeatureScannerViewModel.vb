@@ -288,6 +288,41 @@ Namespace ViewModels
             StopScanCommand = New RelayCommand(AddressOf ExecuteStopScan, AddressOf CanExecuteStopScan)
             CloseCommand = New RelayCommand(AddressOf ExecuteClose, AddressOf CanExecuteClose)
             UseResultCommand = New RelayCommand(AddressOf ExecuteUseResult, AddressOf CanExecuteUseResult)
+
+            ' Auto-detect debugger path
+            AutoDetectDebuggerPath()
+        End Sub
+
+        ''' <summary>
+        ''' Attempts to auto-detect symchk.exe in common Windows Kits Debuggers locations.
+        ''' Sets DebuggerPath if found.
+        ''' </summary>
+        Private Sub AutoDetectDebuggerPath()
+            Dim programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
+            Dim programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+
+            ' Common paths to check for symchk.exe
+            Dim pathsToCheck As New List(Of String)()
+
+            ' Add Program Files paths (x64 and x86 debuggers)
+            If Not String.IsNullOrEmpty(programFiles) Then
+                pathsToCheck.Add(System.IO.Path.Combine(programFiles, "Windows Kits", "10", "Debuggers", "x64", "symchk.exe"))
+                pathsToCheck.Add(System.IO.Path.Combine(programFiles, "Windows Kits", "10", "Debuggers", "x86", "symchk.exe"))
+            End If
+
+            ' Add Program Files (x86) paths (for 32-bit SDK installations)
+            If Not String.IsNullOrEmpty(programFilesX86) AndAlso programFilesX86 <> programFiles Then
+                pathsToCheck.Add(System.IO.Path.Combine(programFilesX86, "Windows Kits", "10", "Debuggers", "x64", "symchk.exe"))
+                pathsToCheck.Add(System.IO.Path.Combine(programFilesX86, "Windows Kits", "10", "Debuggers", "x86", "symchk.exe"))
+            End If
+
+            ' Check each path and set DebuggerPath if found
+            For Each path In pathsToCheck
+                If System.IO.File.Exists(path) Then
+                    DebuggerPath = path
+                    Exit For
+                End If
+            Next
         End Sub
 
 #Region "Command Implementations"
