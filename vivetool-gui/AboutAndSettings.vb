@@ -13,7 +13,7 @@
 '
 'You should have received a copy of the GNU General Public License
 'along with this program.  If not, see <https://www.gnu.org/licenses/>.
-Imports Telerik.WinControls.UI
+
 ''' <summary>
 ''' About && Settings Dialog/Form
 ''' </summary>
@@ -26,6 +26,9 @@ Public NotInheritable Class AboutAndSettings
     Private Sub AboutAndSettings_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         'Load the About Labels
         LoadAboutLabels()
+
+        'Load settings
+        CB_AutoLoad.Checked = My.Settings.AutoLoad
     End Sub
 
     ''' <summary>
@@ -46,28 +49,28 @@ Public NotInheritable Class AboutAndSettings
     End Sub
 
     ''' <summary>
-    ''' Change the App Icon depending on the selected RadPageViewPage
+    ''' Change the App Icon depending on the selected TabPage
     ''' </summary>
     ''' <param name="sender">Default sender Object</param>
     ''' <param name="e">Default EventArgs</param>
-    Private Sub RPV_Main_SelectedPageChanged(sender As Object, e As EventArgs) Handles RPV_Main.SelectedPageChanged
-        If RPV_Main.SelectedPage Is RPVP_About Then
+    Private Sub TabControl_Main_SelectedIndexChanged(sender As Object, e As EventArgs) Handles TabControl_Main.SelectedIndexChanged
+        If TabControl_Main.SelectedTab Is TabPage_About Then
             Icon = My.Resources.about
-        ElseIf RPV_Main.SelectedPage Is RPVP_Settings Then
+        ElseIf TabControl_Main.SelectedTab Is TabPage_Settings Then
             Icon = My.Resources.settings_system_daydream
         End If
     End Sub
 
     ''' <summary>
-    ''' Changes the Application theme depending on the ToggleState
+    ''' Changes the Application theme depending on the CheckState
     ''' </summary>
     ''' <param name="sender"></param>
-    ''' <param name="args"></param>
-    Private Sub RTB_ThemeToggle_ToggleStateChanging(sender As Object, args As StateChangingEventArgs) Handles RTB_ThemeToggle.ToggleStateChanging
-        If args.NewValue = Telerik.WinControls.Enumerations.ToggleState.On Then
-            ThemeHelper.ApplyDarkTheme(RTB_ThemeToggle, My.Resources.icons8_moon_and_stars_24)
+    ''' <param name="e"></param>
+    Private Sub CB_ThemeToggle_CheckedChanged(sender As Object, e As EventArgs) Handles CB_ThemeToggle.CheckedChanged
+        If CB_ThemeToggle.Checked Then
+            ThemeHelper.ApplyDarkTheme(CB_ThemeToggle, My.Resources.icons8_moon_and_stars_24)
         Else
-            ThemeHelper.ApplyLightTheme(RTB_ThemeToggle, My.Resources.icons8_sun_24)
+            ThemeHelper.ApplyLightTheme(CB_ThemeToggle, My.Resources.icons8_sun_24)
         End If
     End Sub
 
@@ -99,28 +102,24 @@ Public NotInheritable Class AboutAndSettings
     End Sub
 
     ''' <summary>
-    ''' Changes the Application theme, using the System Theme depending on the ToggleState
+    ''' Changes the Application theme, using the System Theme depending on the CheckState
     ''' </summary>
     ''' <param name="sender">Default sender Object</param>
-    ''' <param name="args">StateChanged EventArgs</param>
-    Private Sub RTB_UseSystemTheme_ToggleStateChanged(sender As Object, args As StateChangedEventArgs) Handles RTB_UseSystemTheme.ToggleStateChanged
-        If args.ToggleState = Telerik.WinControls.Enumerations.ToggleState.On Then
-            ThemeHelper.ApplySystemTheme(RTB_ThemeToggle, My.Resources.icons8_moon_and_stars_24, My.Resources.icons8_sun_24)
+    ''' <param name="e">Default EventArgs</param>
+    Private Sub CB_UseSystemTheme_CheckedChanged(sender As Object, e As EventArgs) Handles CB_UseSystemTheme.CheckedChanged
+        If CB_UseSystemTheme.Checked Then
+            ThemeHelper.ApplySystemTheme(CB_ThemeToggle, My.Resources.icons8_moon_and_stars_24, My.Resources.icons8_sun_24)
         Else
             ThemeHelper.DisableSystemTheme()
         End If
     End Sub
 
     ''' <summary>
-    ''' Changes if the latest Build should be auto-loaded, depending on the ToggleState
+    ''' Changes if the latest Build should be auto-loaded, depending on the CheckState
     ''' </summary>
     ''' <param name="sender">Default sender Object</param>
     ''' <param name="e">Default EventArgs</param>
-    Private Sub RTS_AutoLoad_ValueChanged(sender As Object, e As EventArgs) Handles RTS_AutoLoad.ValueChanged
-        If RTS_AutoLoad.Value Then
-            My.Settings.AutoLoad = True
-        Else
-            My.Settings.AutoLoad = False
-        End If
+    Private Sub CB_AutoLoad_CheckedChanged(sender As Object, e As EventArgs) Handles CB_AutoLoad.CheckedChanged
+        My.Settings.AutoLoad = CB_AutoLoad.Checked
     End Sub
 End Class
